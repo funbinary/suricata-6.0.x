@@ -70,7 +70,7 @@ jobs:
           cd $HOME/.cargo/bin
           curl -OL https://github.com/eqrion/cbindgen/releases/download/v0.15.0/cbindgen
           chmod 755 cbindgen
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
         with:
           fetch-depth: 0
       # The action above is supposed to do this for us, but it doesn't appear to stick.
