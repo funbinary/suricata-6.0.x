@@ -58,7 +58,7 @@ vars:
 # The default logging directory.  Any log or output file will be
 # placed here if it's not specified with a full path name. This can be
 # overridden with the -l command line parameter.
-default-log-dir: @e_logdir@
+default-log-dir: /kds/log/suricata/
 
 # Global stats configuration
 stats:
@@ -1916,7 +1916,7 @@ napatech:
 ## Configure Suricata to load Suricata-Update managed rules.
 ##
 
-default-rule-path: @e_defaultruledir@
+default-rule-path: /mnt/d/workspace/github/net-analysis/suricata/rules
 
 rule-files:
   - suricata.rules
@@ -1925,8 +1925,8 @@ rule-files:
 ## Auxiliary configuration files.
 ##
 
-classification-file: @e_sysconfdir@classification.config
-reference-config-file: @e_sysconfdir@reference.config
+classification-file: /mnt/d/workspace/github/net-analysis/suricata/etc/classification.config
+reference-config-file: /mnt/d/workspace/github/net-analysis/suricata/etc/reference.config
 # threshold-file: @e_sysconfdir@threshold.config
 
 ##

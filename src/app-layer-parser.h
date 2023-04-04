@@ -144,6 +144,7 @@ void AppLayerParserRegisterParserAcceptableDataDirection(uint8_t ipproto,
                                               uint8_t direction);
 void AppLayerParserRegisterOptionFlags(uint8_t ipproto, AppProto alproto,
         uint32_t flags);
+// 注册
 void AppLayerParserRegisterStateFuncs(uint8_t ipproto, AppProto alproto,
         void *(*StateAlloc)(void *, AppProto), void (*StateFree)(void *));
 void AppLayerParserRegisterLocalStorageFunc(uint8_t ipproto, AppProto proto,

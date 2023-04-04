@@ -536,6 +536,8 @@ static uint32_t DNP3CalculateLinkLength(uint8_t length)
     length -= DNP3_LINK_HDR_LEN;
 
     rem = length % DNP3_BLOCK_SIZE;
+    // length / DNP3_BLOCK_SIZE 块数量
+    //
     frame_len = (length / DNP3_BLOCK_SIZE) * (DNP3_BLOCK_SIZE + DNP3_CRC_LEN);
     if (rem) {
         frame_len += rem + DNP3_CRC_LEN;
@@ -857,8 +859,10 @@ static void DNP3HandleUserDataRequest(DNP3State *dnp3, const uint8_t *input,
     DNP3ApplicationHeader *ah;
     DNP3Transaction *tx = NULL, *ttx;
 
+    // 链路层
     lh = (DNP3LinkHeader *)input;
 
+    // 校验用户数据CRC
     if (!DNP3CheckUserDataCRCs(input + sizeof(DNP3LinkHeader),
             input_len - sizeof(DNP3LinkHeader))) {
         return;
@@ -867,6 +871,8 @@ static void DNP3HandleUserDataRequest(DNP3State *dnp3, const uint8_t *input,
     th = input[sizeof(DNP3LinkHeader)];
 
     if (!DNP3_TH_FIR(th)) {
+        // 非第一帧
+
         TAILQ_FOREACH(ttx, &dnp3->tx_list, next) {
             if (ttx->request_lh.src == lh->src &&
                 ttx->request_lh.dst == lh->dst &&
@@ -888,6 +894,8 @@ static void DNP3HandleUserDataRequest(DNP3State *dnp3, const uint8_t *input,
         tx->response_th = th;
     }
     else {
+        // 第一帧
+        // 解析
         ah = (DNP3ApplicationHeader *)(input + sizeof(DNP3LinkHeader) +
             sizeof(DNP3TransportHeader));
 
@@ -1068,11 +1076,11 @@ static int DNP3HandleRequestLinkLayer(DNP3State *dnp3, const uint8_t *input,
         }
 
         DNP3LinkHeader *header = (DNP3LinkHeader *)input;
-
+        // 校验起始帧
         if (!DNP3CheckStartBytes(header)) {
             goto error;
         }
-
+        // 校验CRC
         if (!DNP3CheckLinkHeaderCRC(header)) {
             DNP3SetEvent(dnp3, DNP3_DECODER_EVENT_BAD_LINK_CRC);
             goto error;
@@ -1206,17 +1214,17 @@ static int DNP3HandleResponseLinkLayer(DNP3State *dnp3, const uint8_t *input,
         }
 
         DNP3LinkHeader *header = (DNP3LinkHeader *)input;
-
+        // 校验头
         if (!DNP3CheckStartBytes(header)) {
             goto error;
         }
-
+        // 校验CRC
         if (!DNP3CheckLinkHeaderCRC(header)) {
             DNP3SetEvent(dnp3, DNP3_DECODER_EVENT_BAD_LINK_CRC);
             goto error;
         }
 
-        /* Calculate the number of bytes needed to for this frame. */
+        // 计算帧长度
         uint32_t frame_len = DNP3CalculateLinkLength(header->len);
         if (frame_len == 0) {
             DNP3SetEvent(dnp3, DNP3_DECODER_EVENT_LEN_TOO_SMALL);
@@ -1227,7 +1235,7 @@ static int DNP3HandleResponseLinkLayer(DNP3State *dnp3, const uint8_t *input,
             break;
         }
 
-        /* Only handle user data frames for now. */
+        // 没有用户数据,进入下次包处理
         if (!DNP3IsUserData(header)) {
             goto next;
         }

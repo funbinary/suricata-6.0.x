@@ -295,6 +295,7 @@ void RunModeDispatch(int runmode, const char *custom_mode,
         }
     }
 
+
     if (custom_mode == NULL || strcmp(custom_mode, "auto") == 0) {
         switch (runmode) {
             case RUNMODE_PCAP_DEV:
@@ -366,7 +367,8 @@ void RunModeDispatch(int runmode, const char *custom_mode,
             custom_mode = local_custom_mode;
         }
     }
-
+    SCLogInfo("custom_mode:%s",custom_mode); // worksers
+    SCLogInfo("runmode:%d",runmode);
     RunMode *mode = RunModeGetCustomMode(runmode, custom_mode);
     if (mode == NULL) {
         SCLogError(SC_ERR_RUNMODE, "The custom type \"%s\" doesn't exist "
@@ -378,6 +380,7 @@ void RunModeDispatch(int runmode, const char *custom_mode,
 
     /* Export the custom mode */
     if (active_runmode) {
+
         SCFree(active_runmode);
     }
     active_runmode = SCStrdup(custom_mode);
@@ -386,6 +389,7 @@ void RunModeDispatch(int runmode, const char *custom_mode,
     }
 
     if (strcasecmp(active_runmode, "autofp") == 0) {
+        SCLogInfo("============TmqhFlowPrintAutofpHandler=");
         TmqhFlowPrintAutofpHandler();
     }
 
@@ -398,6 +402,8 @@ void RunModeDispatch(int runmode, const char *custom_mode,
     TmValidateQueueState();
 
     if (runmode != RUNMODE_UNIX_SOCKET) {
+        SCLogInfo("============RUNMODE_UNIX_SOCKET=");
+
         /* spawn management threads */
         FlowManagerThreadSpawn();
         FlowRecyclerThreadSpawn();

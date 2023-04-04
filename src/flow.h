@@ -334,56 +334,43 @@ typedef unsigned short FlowStateType;
 /** Local Thread ID */
 typedef uint16_t FlowThreadId;
 
-/**
- *  \brief Flow data structure.
- *
- *  The flow is a global data structure that is created for new packets of a
- *  flow and then looked up for the following packets of a flow.
- *
- *  Locking
- *
- *  The flow is updated/used by multiple packets at the same time. This is why
- *  there is a flow-mutex. It's a mutex and not a spinlock because some
- *  operations on the flow can be quite expensive, thus spinning would be
- *  too expensive.
- *
- *  The flow "header" (addresses, ports, proto, recursion level) are static
- *  after the initialization and remain read-only throughout the entire live
- *  of a flow. This is why we can access those without protection of the lock.
- */
 
+// 流的新数据包的全局数据结构
+// Lock: flow被多个报文同时更新/使用,所以添加互斥锁
+// header: 地址 端口 协议 递归级别 只读
 typedef struct Flow_
 {
-    /* flow "header", used for hashing and flow lookup. Static after init,
-     * so safe to look at without lock */
-    FlowAddress src, dst;
+    // header: 用于hash和流查找
+    // 初始化后是静态的,所以不需要lock
+    FlowAddress src, dst; // 网络层地址
     union {
-        Port sp;        /**< tcp/udp source port */
+        Port sp;            // 源端口
         struct {
             uint8_t type;   /**< icmp type */
             uint8_t code;   /**< icmp code */
         } icmp_s;
     };
     union {
-        Port dp;        /**< tcp/udp destination port */
+        Port dp;            // 目的端口端口
         struct {
             uint8_t type;   /**< icmp type */
             uint8_t code;   /**< icmp code */
         } icmp_d;
     };
-    uint8_t proto;
-    uint8_t recursion_level;
-    uint16_t vlan_id[2];
-    /** how many references exist to this flow *right now*
-     *
-     *  On receiving a packet the counter is incremented while the flow
-     *  bucked is locked, which is also the case on timeout pruning.
-     */
+    uint8_t proto;          // 协议
+    uint8_t recursion_level; //隧道封装次数,普通数据包为0,由recursion_level赋值
+    uint16_t vlan_id[2];     //vlan id
+
+
+    // 流引用计数
+    // 在接收包时此计数会递增
+    // 阻塞的流被锁定,在超时修剪(pruning)也是这样
     FlowRefCount use_cnt;
 
     uint8_t vlan_idx;
 
     /* track toserver/toclient flow timeout needs */
+    // 跟踪toserver/toclient流超时
     union {
         struct {
             uint8_t ffr_ts:4;
@@ -392,52 +379,55 @@ typedef struct Flow_
         uint8_t ffr;
     };
 
-    /** timestamp in seconds of the moment this flow will timeout
-     *  according to the timeout policy. Does *not* take emergency
-     *  mode into account. */
+    // 超时时间戳，以秒为单位，不考虑紧急模式。
     uint32_t timeout_at;
 
-    /** Thread ID for the stream/detect portion of this flow */
+    // 此流/检测的线程ID
     FlowThreadId thread_id[2];
 
-    struct Flow_ *next; /* (hash) list next */
-    /** Incoming interface */
+    // 链表next
+    struct Flow_ *next;
+    // 对应的网卡
     struct LiveDevice_ *livedev;
 
-    /** flow hash - the flow hash before hash table size mod. */
+    // 从packet的flow_hash赋值
+    // 未经过flow_config.hash_size取余的hash值
     uint32_t flow_hash;
 
-    /* time stamp of last update (last packet). Set/updated under the
-     * flow and flow hash row locks, safe to read under either the
-     * flow lock or flow hash row lock. */
+
+    // 当前flow最后的数据包更新事件
+    // 在流和流hash行锁设置更新, 在流所或流哈希行锁下读取是安全的
     struct timeval lastts;
 
     /* end of flow "header" */
 
-    /** timeout policy value in seconds to add to the lastts.tv_sec
-     *  when a packet has been received. */
+    // 超时策略值(以秒为单位)要添加到lastts中。Tv_sec当数据包已收到。
     uint32_t timeout_policy;
 
+    // 流的当前状态: new,established(连接成功),closed,local_bypassed,capture_bypassed
     FlowStateType flow_state;
 
-    /** flow tenant id, used to setup flow timeout and stream pseudo
-     *  packets with the correct tenant id set */
+    // flow tenant id: 用于设置流超时和流tenant设置了正确租户id的数据包
     uint32_t tenant_id;
 
+    // 应用层协议检测probing parser方法时,标记该方向以及验证过不符合应用层协议,避免重复验证
     uint32_t probing_parser_toserver_alproto_masks;
     uint32_t probing_parser_toclient_alproto_masks;
 
-    uint32_t flags;         /**< generic flags */
+    // flow的flags,见43行左右的定义
+    uint32_t flags;
 
-    uint16_t file_flags;    /**< file tracking/extraction flags */
+    // 文件跟踪/提取flags
+    uint16_t file_flags;
 
-    /** destination port to be used in protocol detection. This is meant
-     *  for use with STARTTLS and HTTP CONNECT detection */
-    uint16_t protodetect_dp; /**< 0 if not used */
+    // 协议检测的目的端口。这意味着用于STARTTLS和HTTP CONNECT检测
+    // 0未使用
+    uint16_t protodetect_dp;
 
-    /* Parent flow id for protocol like ftp */
+    // 父ID, 比如ftp
     int64_t parent_id;
 
+    // 锁
 #ifdef FLOWLOCK_RWLOCK
     SCRWLock r;
 #elif defined FLOWLOCK_MUTEX
@@ -446,30 +436,32 @@ typedef struct Flow_
     #error Enable FLOWLOCK_RWLOCK or FLOWLOCK_MUTEX
 #endif
 
-    /** protocol specific data pointer, e.g. for TcpSession */
+    // 协议数据指针, 比如tcp的会话信息TcpSession
     void *protoctx;
 
-    /** mapping to Flow's protocol specific protocols for timeouts
-        and state and free functions. */
+    // 根据packet协议映射得到的美剧类型
+    // 比如IPPROTO_TCP映射为FLOW_PROTO_TCP
+    // 应用层协议检测和协议分析时会使用
+    // 因为只对tcp、udp、icmp、sctp四种类型做应用层检测与分析
+    // 因此重新映射为新的枚举值用来做数组索引
     uint8_t protomap;
 
     uint8_t flow_end_flags;
     /* coccinelle: Flow:flow_end_flags:FLOW_END_FLAG_ */
 
-    AppProto alproto; /**< \brief application level protocol */
+    // 应用层协议
+    AppProto alproto;
     AppProto alproto_ts;
     AppProto alproto_tc;
 
-    /** original application level protocol. Used to indicate the previous
-       protocol when changing to another protocol , e.g. with STARTTLS. */
+    // 原始应用层协议。用于在切换到另一种协议时表示前一种协议，例如STATTLS
     AppProto alproto_orig;
-    /** expected app protocol: used in protocol change/upgrade like in
-     *  STARTTLS. */
+    //预期应用协议:用于协议变更/升级，如STARTTLS
     AppProto alproto_expect;
 
-    /** detection engine ctx version used to inspect this flow. Set at initial
-     *  inspection. If it doesn't match the currently in use de_ctx, the
-     *  stored sgh ptrs are reset. */
+    // 检测引擎CTX版本用于检测此流程。
+    // 初始检验时设置。
+    // 如果它不匹配当前使用的de_ctx，存储的sgh ptrs将被重置。
     uint32_t de_ctx_version;
 
     /** ttl tracking */
@@ -478,22 +470,22 @@ typedef struct Flow_
     uint8_t min_ttl_toclient;
     uint8_t max_ttl_toclient;
 
-    /** application level storage ptrs.
-     *
-     */
-    AppLayerParserState *alparser;     /**< parser internal state */
-    void *alstate;      /**< application layer state */
+    // 应用层存储指针
 
-    /** toclient sgh for this flow. Only use when FLOW_SGH_TOCLIENT flow flag
-     *  has been set. */
+    AppLayerParserState *alparser; // 解析内部状态,解析器的状态
+    void *alstate;    // 应用层state
+
+    // flow toclient sgh
+    // 仅当FLOW_SGH_TOCLIENT流标记已设置时使用
     const struct SigGroupHead_ *sgh_toclient;
-    /** toserver sgh for this flow. Only use when FLOW_SGH_TOSERVER flow flag
-     *  has been set. */
+    // flow toserver sgh
+    // 仅当FLOW_SGH_TOSERVER流标记已设置时使用
     const struct SigGroupHead_ *sgh_toserver;
 
     /* pointer to the var list */
     GenericVar *flowvar;
 
+    // 挂载到FlowBucket时表明flow所属的bucket
     struct FlowBucket_ *fb;
 
     struct timeval startts;

@@ -773,7 +773,7 @@ int AppLayerHandleUdp(ThreadVars *tv, AppLayerThreadCtx *tctx, Packet *p, Flow *
 
     /* if the protocol is still unknown, run detection */
     if (f->alproto == ALPROTO_UNKNOWN) {
-        SCLogDebug("Detecting AL proto on udp mesg (len %" PRIu32 ")",
+        SCLogInfo("Detecting AL proto on udp mesg (len %" PRIu32 ")",
                    p->payload_len);
 
         bool reverse_flow = false;
@@ -787,7 +787,7 @@ int AppLayerHandleUdp(ThreadVars *tv, AppLayerThreadCtx *tctx, Packet *p, Flow *
             AppLayerIncFlowCounter(tv, f);
 
             if (reverse_flow) {
-                SCLogDebug("reversing flow after proto detect told us so");
+                SCLogInfo("reversing flow after proto detect told us so");
                 PacketSwap(p);
                 FlowSwap(f);
                 SWAP_FLAGS(flags, STREAM_TOSERVER, STREAM_TOCLIENT);
@@ -808,7 +808,7 @@ int AppLayerHandleUdp(ThreadVars *tv, AppLayerThreadCtx *tctx, Packet *p, Flow *
         FlagPacketFlow(p, f, STREAM_TOSERVER);
         FlagPacketFlow(p, f, STREAM_TOCLIENT);
     } else {
-        SCLogDebug("data (len %" PRIu32 " ), alproto "
+        SCLogInfo("data (len %" PRIu32 " ), alproto "
                    "%"PRIu16" (flow %p)", p->payload_len, f->alproto, f);
 
         /* run the parser */
@@ -865,11 +865,14 @@ void AppLayerListSupportedProtocols(void)
 int AppLayerSetup(void)
 {
     SCEnter();
-
+    // 初始化该模块所用到的多模式匹配器；
     AppLayerProtoDetectSetup();
+    // 通过传输层和应用层协议号构建了一个二维数组，并在该数组中为相应的流重组深度赋值；
     AppLayerParserSetup();
 
+    // 注册各种应用层协议的解析器 （如RegisterHTPParsers函数对应HTTP协议，这个后面会详细分析）；
     AppLayerParserRegisterProtocolParsers();
+    //
     AppLayerProtoDetectPrepareState();
 
     AppLayerSetupCounters();

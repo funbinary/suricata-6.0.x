@@ -1229,14 +1229,14 @@ void SCACPrintInfo(MpmCtx *mpm_ctx)
 void MpmACRegister(void)
 {
     mpm_table[MPM_AC].name = "ac";
-    mpm_table[MPM_AC].InitCtx = SCACInitCtx;
+    mpm_table[MPM_AC].InitCtx = SCACInitCtx;// 初始化函数
     mpm_table[MPM_AC].InitThreadCtx = SCACInitThreadCtx;
     mpm_table[MPM_AC].DestroyCtx = SCACDestroyCtx;
     mpm_table[MPM_AC].DestroyThreadCtx = SCACDestroyThreadCtx;
-    mpm_table[MPM_AC].AddPattern = SCACAddPatternCS;
+    mpm_table[MPM_AC].AddPattern = SCACAddPatternCS; // 增加模式函数
     mpm_table[MPM_AC].AddPatternNocase = SCACAddPatternCI;
     mpm_table[MPM_AC].Prepare = SCACPreparePatterns;
-    mpm_table[MPM_AC].Search = SCACSearch;
+    mpm_table[MPM_AC].Search = SCACSearch;//搜索函数
     mpm_table[MPM_AC].PrintCtx = SCACPrintInfo;
     mpm_table[MPM_AC].PrintThreadCtx = SCACPrintSearchStats;
     mpm_table[MPM_AC].RegisterUnittests = SCACRegisterTests;

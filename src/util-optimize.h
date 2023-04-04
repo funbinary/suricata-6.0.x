@@ -32,7 +32,7 @@
 #define likely(expr) __builtin_expect(!!(expr), 1)
 #endif
 #ifndef unlikely
-#define unlikely(expr) __builtin_expect(!!(expr), 0)
+#define unlikely(expr) __builtin_expect(!!(expr), 0) // 进行编译器if else优化
 #endif
 #endif
 

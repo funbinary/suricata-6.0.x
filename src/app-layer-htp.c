@@ -3070,12 +3070,15 @@ static AppLayerTxData *HTPGetTxData(void *vtx)
 
 static int HTPRegisterPatternsForProtocolDetection(void)
 {
+    // 协议方法
     const char *methods[] = { "GET", "PUT", "POST", "HEAD", "TRACE", "OPTIONS",
         "CONNECT", "DELETE", "PATCH", "PROPFIND", "PROPPATCH", "MKCOL",
         "COPY", "MOVE", "LOCK", "UNLOCK", "CHECKOUT", "UNCHECKOUT", "CHECKIN",
         "UPDATE", "LABEL", "REPORT", "MKWORKSPACE", "MKACTIVITY", "MERGE",
         "INVALID", "VERSION-CONTROL", "BASELINE-CONTROL", NULL};
+    // 20 空格  09 - 水平制表符(tab)
     const char *spacings[] = { "|20|", "|09|", NULL };
+    // 协议版本
     const char *versions[] = { "HTTP/0.9", "HTTP/1.0", "HTTP/1.1", NULL };
 
     int methods_pos;
@@ -3105,6 +3108,7 @@ static int HTPRegisterPatternsForProtocolDetection(void)
 
     /* Loop through all the http verions patterns that are TO_CLIENT */
     for (versions_pos = 0; versions[versions_pos]; versions_pos++) {
+        SCLogInfo("register http buffer:%s",versions[versions_pos]);
         register_result = AppLayerProtoDetectPMRegisterPatternCI(IPPROTO_TCP,
                 ALPROTO_HTTP, versions[versions_pos], strlen(versions[versions_pos]),
                 0, STREAM_TOCLIENT);
@@ -3126,9 +3130,11 @@ void RegisterHTPParsers(void)
 
     const char *proto_name = "http";
 
-    /** HTTP */
+    // 检查配置中app-layers.protocols.http.enabled是否启用
     if (AppLayerProtoDetectConfProtoDetectionEnabled("tcp", proto_name)) {
+        // 注册http协议
         AppLayerProtoDetectRegisterProtocol(ALPROTO_HTTP, proto_name);
+        // 注册协议匹配关键字
         if (HTPRegisterPatternsForProtocolDetection() < 0)
             return;
     } else {
@@ -3136,36 +3142,53 @@ void RegisterHTPParsers(void)
                   proto_name);
         return;
     }
-
     if (AppLayerParserConfParserEnabled("tcp", proto_name)) {
+        // state
         AppLayerParserRegisterStateFuncs(IPPROTO_TCP, ALPROTO_HTTP, HTPStateAlloc, HTPStateFree);
+
+        // AppLayerParserFPtr
+        AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_HTTP, STREAM_TOSERVER,
+                HTPHandleRequestData);
+        // AppLayerParserFPtr
+        AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_HTTP, STREAM_TOCLIENT,
+                HTPHandleResponseData);
+        // StateGetEvents
+        AppLayerParserRegisterGetEventsFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPGetEvents);
+        // StateGetEventInfo
+        AppLayerParserRegisterGetEventInfo(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetEventInfo);
+        // StateGetEventInfoById
+        AppLayerParserRegisterGetEventInfoById(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetEventInfoById);
+        // GetTxDetectState SetTxDetectState
+        AppLayerParserRegisterDetectStateFuncs(IPPROTO_TCP, ALPROTO_HTTP,
+                HTPGetTxDetectState, HTPSetTxDetectState);
+        // StateTransactionFree
         AppLayerParserRegisterTxFreeFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPStateTransactionFree);
+        // StateGetFiles
         AppLayerParserRegisterGetFilesFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetFiles);
+        // StateGetProgress
         AppLayerParserRegisterGetStateProgressFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetAlstateProgress);
+        // StateGetTxCnt
         AppLayerParserRegisterGetTxCnt(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetTxCnt);
+        // StateGetTx
         AppLayerParserRegisterGetTx(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetTx);
+        // GetTxData
+        AppLayerParserRegisterTxDataFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPGetTxData);
+        // StateGetProgressCompletionStatus
         AppLayerParserRegisterGetStateProgressCompletionStatus(ALPROTO_HTTP,
                                                                HTPStateGetAlstateProgressCompletionStatus);
-        AppLayerParserRegisterGetEventsFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPGetEvents);
-        AppLayerParserRegisterGetEventInfo(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetEventInfo);
-        AppLayerParserRegisterGetEventInfoById(IPPROTO_TCP, ALPROTO_HTTP, HTPStateGetEventInfoById);
 
+
+        //Truncate
         AppLayerParserRegisterTruncateFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPStateTruncate);
-        AppLayerParserRegisterDetectStateFuncs(IPPROTO_TCP, ALPROTO_HTTP,
-                                               HTPGetTxDetectState, HTPSetTxDetectState);
-        AppLayerParserRegisterTxDataFunc(IPPROTO_TCP, ALPROTO_HTTP, HTPGetTxData);
 
+        // SetStreamDepthFlag
         AppLayerParserRegisterSetStreamDepthFlag(IPPROTO_TCP, ALPROTO_HTTP,
                                                  AppLayerHtpSetStreamDepthFlag);
-
-        AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_HTTP, STREAM_TOSERVER,
-                                     HTPHandleRequestData);
-        AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_HTTP, STREAM_TOCLIENT,
-                                     HTPHandleResponseData);
         SC_ATOMIC_INIT(htp_config_flags);
         /* This parser accepts gaps. */
         AppLayerParserRegisterOptionFlags(
                 IPPROTO_TCP, ALPROTO_HTTP, APP_LAYER_PARSER_OPT_ACCEPT_GAPS);
+        //
         AppLayerParserRegisterParserAcceptableDataDirection(IPPROTO_TCP,
                 ALPROTO_HTTP, STREAM_TOSERVER|STREAM_TOCLIENT);
         HTPConfigure();

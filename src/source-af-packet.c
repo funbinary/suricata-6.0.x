@@ -1068,6 +1068,7 @@ static int AFPReadFromRing(AFPThreadVars *ptv)
             goto next_frame;
         }
 
+        //从队列中获取一个空闲的结构体
         Packet *p = PacketGetFromQueueOrAlloc();
         if (p == NULL) {
             return AFPSuriFailure(ptv, h);
@@ -1104,14 +1105,18 @@ static inline void AFPFlushBlock(struct tpacket_block_desc *pbd)
     pbd->hdr.bh1.block_status = TP_STATUS_KERNEL;
 }
 
+// pbd 数据包块
+// ppd 解析的数据包
 static inline int AFPParsePacketV3(AFPThreadVars *ptv, struct tpacket_block_desc *pbd, struct tpacket3_hdr *ppd)
 {
+    //从队列中获取一个数据包或者分配一个新的数据包
     Packet *p = PacketGetFromQueueOrAlloc();
     if (p == NULL) {
         SCReturnInt(AFP_SURI_FAILURE);
     }
+    // 将数据包的源设置为 PKT_SRC_WIRE
     PKT_SET_SRC(p, PKT_SRC_WIRE);
-
+   // AFPReadApplyBypass 函数应用绕过规则 IDS并未执行
     AFPReadApplyBypass(ptv, p);
 
     ptv->pkts++;
@@ -1556,7 +1561,8 @@ TmEcode ReceiveAFPLoop(ThreadVars *tv, void *data, void *slot)
         AFPPeersListReachedInc();
     }
     if (ptv->afp_state == AFP_STATE_UP) {
-        SCLogDebug("Thread %s using socket %d", tv->name, ptv->socket);
+        SCLogInfo("Thread %s using socket %d", tv->name, ptv->socket);
+        // 在所有线程都准备好前丢弃数据包,因为集群设置尚未完成
         AFPSynchronizeStart(ptv, &discarded_pkts);
         /* let's reset counter as we will start the capture at the
          * next function call */
@@ -1566,7 +1572,7 @@ TmEcode ReceiveAFPLoop(ThreadVars *tv, void *data, void *slot)
          if (getsockopt(ptv->socket, SOL_PACKET, PACKET_STATISTICS,
                      &kstats, &len) > -1) {
              uint64_t pkts = 0;
-             SCLogDebug("(%s) Kernel socket startup: Packets %" PRIu32
+             SCLogInfo("(%s) Kernel socket startup: Packets %" PRIu32
                      ", dropped %" PRIu32 "",
                      ptv->tv->name,
                      kstats.tp_packets, kstats.tp_drops);
@@ -1597,9 +1603,7 @@ TmEcode ReceiveAFPLoop(ThreadVars *tv, void *data, void *slot)
             if (dbreak == 1)
                 break;
         }
-
-        /* make sure we have at least one packet in the packet pool, to prevent
-         * us from alloc'ing packets at line rate */
+        // 确保我们至少有一个数据包在数据包池中，以防止我们在线速率下分配数据包
         PacketPoolWait();
 
         r = poll(&fds, 1, POLL_TIMEOUT);
@@ -1672,7 +1676,7 @@ TmEcode ReceiveAFPLoop(ThreadVars *tv, void *data, void *slot)
         }
         StatsSyncCountersIfSignalled(tv);
     }
-
+    SCLogInfo("==========================end");
     AFPDumpCounters(ptv);
     StatsSyncCountersIfSignalled(tv);
     SCReturnInt(TM_ECODE_OK);
@@ -2151,6 +2155,7 @@ static int AFPCreateSocket(AFPThreadVars *ptv, char *devname, int verbose)
         goto socket_err;
     }
 
+    // 设置混杂模式
     if (ptv->promisc != 0) {
         /* Force promiscuous mode */
         memset(&sock_params, 0, sizeof(sock_params));
@@ -2167,6 +2172,8 @@ static int AFPCreateSocket(AFPThreadVars *ptv, char *devname, int verbose)
 
     if (ptv->checksum_mode == CHECKSUM_VALIDATION_KERNEL) {
         int val = 1;
+        // 启用接收数据包时额外的元数据信息
+        // see https://www.man7.org/linux/man-pages/man7/packet.7.html
         if (setsockopt(ptv->socket, SOL_PACKET, PACKET_AUXDATA, &val,
                     sizeof(val)) == -1 && errno != ENOPROTOOPT) {
             SCLogWarning(SC_ERR_NO_AF_PACKET,
@@ -2745,7 +2752,7 @@ TmEcode ReceiveAFPThreadInit(ThreadVars *tv, const void *initdata, void **data)
         SCLogError(SC_ERR_INVALID_ARGUMENT, "initdata == NULL");
         SCReturnInt(TM_ECODE_FAILED);
     }
-
+    // AFPThreadVars 存储线程变量
     AFPThreadVars *ptv = SCMalloc(sizeof(AFPThreadVars));
     if (unlikely(ptv == NULL)) {
         afpconfig->DerefFunc(afpconfig);
@@ -2877,6 +2884,7 @@ TmEcode ReceiveAFPThreadInit(ThreadVars *tv, const void *initdata, void **data)
 void ReceiveAFPThreadExitStats(ThreadVars *tv, void *data)
 {
     SCEnter();
+
     AFPThreadVars *ptv = (AFPThreadVars *)data;
 
 #ifdef PACKET_STATISTICS
@@ -2975,6 +2983,7 @@ TmEcode DecodeAFPThreadInit(ThreadVars *tv, const void *initdata, void **data)
 
 TmEcode DecodeAFPThreadDeinit(ThreadVars *tv, void *data)
 {
+
     if (data != NULL)
         DecodeThreadVarsFree(tv, data);
     SCReturnInt(TM_ECODE_OK);

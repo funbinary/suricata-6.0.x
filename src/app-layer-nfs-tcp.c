@@ -320,7 +320,7 @@ void RegisterNFSTCPParsers(void)
         AppLayerParserRegisterStateFuncs(IPPROTO_TCP, ALPROTO_NFS,
             NFSTCPStateAlloc, NFSTCPStateFree);
 
-        /* Register request parser for parsing frame from server to client. */
+        /* Register request parser for parsing frame from client to server. */
         AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_NFS,
             STREAM_TOSERVER, NFSTCPParseRequest);
 

@@ -149,7 +149,7 @@ typedef struct AppLayerProtoDetectCtx_ {
     /* Context per ip_proto.
      * \todo Modify ctx_ipp to hold for only tcp and udp. The rest can be
      *       implemented if needed.  Waste of space otherwise. */
-    AppLayerProtoDetectCtxIpproto ctx_ipp[FLOW_PROTO_DEFAULT];
+    AppLayerProtoDetectCtxIpproto ctx_ipp[FLOW_PROTO_DEFAULT]; // 每个传输层协议都有一个context
 
     /* Global SPM thread context prototype. */
     SpmGlobalThreadCtx *spm_global_thread_ctx;
@@ -173,7 +173,7 @@ struct AppLayerProtoDetectThreadCtx_ {
 };
 
 /* The global app layer proto detection context. */
-static AppLayerProtoDetectCtx alpd_ctx;
+static AppLayerProtoDetectCtx alpd_ctx; // 全局应用层协议检测上下文
 
 static void AppLayerProtoDetectPEGetIpprotos(AppProto alproto,
                                              uint8_t *ipprotos);
@@ -1469,8 +1469,9 @@ static int AppLayerProtoDetectPMRegisterPattern(uint8_t ipproto, AppProto alprot
                                                 uint16_t pp_min_depth, uint16_t pp_max_depth)
 {
     SCEnter();
-
+    // 传输层上下文
     AppLayerProtoDetectCtxIpproto *ctx_ipp = &alpd_ctx.ctx_ipp[FlowGetProtoMapping(ipproto)];
+    //
     AppLayerProtoDetectPMCtx *ctx_pm = NULL;
     int ret = 0;
 

@@ -733,31 +733,40 @@ Flow *FlowGetFlowFromHash(ThreadVars *tv, FlowLookupStruct *fls, Packet *p, Flow
     Flow *f = NULL;
 
     /* get our hash bucket and lock it */
+    // 1. 获取packet的hash
     const uint32_t hash = p->flow_hash;
+    // 2. 与配置hash_size取余
     FlowBucket *fb = &flow_hash[hash % flow_config.hash_size];
+    // 3. 上锁
     FromHashLockBucket(fb);
 
     SCLogDebug("fb %p fb->head %p", fb, fb->head);
 
     /* see if the bucket already has a flow */
     if (fb->head == NULL) {
+        // 获取空的并上锁
         f = FlowGetNew(tv, fls, p);
         if (f == NULL) {
+            // 获取失败
             FBLOCK_UNLOCK(fb);
             return NULL;
         }
 
         /* flow is locked */
+        // 插入bucket
         fb->head = f;
 
         /* got one, now lock, initialize and return */
+        // 初始化,填充数据
         FlowInit(f, p);
+
         f->flow_hash = hash;
         f->fb = fb;
+        // 更新状态
         FlowUpdateState(f, FLOW_STATE_NEW);
-
+        // 引用计数
         FlowReference(dest, f);
-
+        // 解锁
         FBLOCK_UNLOCK(fb);
         return f;
     }

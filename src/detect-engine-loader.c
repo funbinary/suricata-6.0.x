@@ -125,7 +125,7 @@ static int DetectLoadSigFile(DetectEngineCtx *de_ctx, char *sig_file,
 
     (*goodsigs) = 0;
     (*badsigs) = 0;
-
+    // 打开文件
     FILE *fp = fopen(sig_file, "r");
     if (fp == NULL) {
         SCLogError(SC_ERR_OPENING_RULE_FILE, "opening rule file %s:"
@@ -165,7 +165,7 @@ static int DetectLoadSigFile(DetectEngineCtx *de_ctx, char *sig_file,
 
         de_ctx->rule_file = sig_file;
         de_ctx->rule_line = lineno - multiline;
-
+        // 解析规则并将其添加到引擎列表中
         sig = DetectEngineAppendSig(de_ctx, line);
         if (sig != NULL) {
             if (rule_engine_analysis_set || fp_engine_analysis_set) {
@@ -249,6 +249,7 @@ static int ProcessSigFiles(DetectEngineCtx *de_ctx, char *pattern,
             return 0;
 #endif
         SCLogConfig("Loading rule file: %s", fname);
+        // 读取文件
         r = DetectLoadSigFile(de_ctx, fname, good_sigs, bad_sigs);
         if (r < 0) {
             ++(st->bad_files);
@@ -297,6 +298,7 @@ int SigLoadSignatures(DetectEngineCtx *de_ctx, char *sig_file, int sig_file_excl
     }
 
     /* ok, let's load signature files from the general config */
+    // sig_file_exclusive来自命令行参数的文件
     if (!(sig_file != NULL && sig_file_exclusive == TRUE)) {
         rule_files = ConfGetNode(varname);
         if (rule_files != NULL) {
@@ -307,8 +309,10 @@ int SigLoadSignatures(DetectEngineCtx *de_ctx, char *sig_file, int sig_file_excl
             }
             else {
                 TAILQ_FOREACH(file, &rule_files->head, next) {
+
                     sfile = DetectLoadCompleteSigPath(de_ctx, file->val);
                     good_sigs = bad_sigs = 0;
+                    // 加载文件
                     ret = ProcessSigFiles(de_ctx, sfile, sig_stat, &good_sigs, &bad_sigs);
                     SCFree(sfile);
 

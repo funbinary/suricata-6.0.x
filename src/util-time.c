@@ -76,9 +76,11 @@ struct tm *SCUtcTime(time_t timep, struct tm *result);
 
 void TimeInit(void)
 {
+    // 初始化锁
     SCSpinInit(&current_time_spinlock, 0);
 
     /* Initialize Time Zone settings. */
+    // 设置时间环境变量。
     tzset();
 }
 

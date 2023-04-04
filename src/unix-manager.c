@@ -1154,7 +1154,7 @@ void UnixManagerThreadSpawn(int mode)
 
     SCCtrlCondInit(&unix_manager_ctrl_cond, NULL);
     SCCtrlMutexInit(&unix_manager_ctrl_mutex, NULL);
-
+    // 创建线程
     tv_unixmgr = TmThreadCreateCmdThreadByName(thread_name_unix_socket,
                                           "UnixManager", 0);
 

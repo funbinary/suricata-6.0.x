@@ -38,7 +38,9 @@ typedef enum StorageEnum_ {
 /** void ptr array for now */
 typedef void* Storage;
 
+// 初始化、程序启动时执行
 void StorageInit(void);
+// 清理，程序退出时执行
 void StorageCleanup(void);
 
 /** \brief Register new storage

@@ -1715,30 +1715,42 @@ void RegisterSMTPParsers(void)
     }
 
     if (AppLayerParserConfParserEnabled("tcp", proto_name)) {
+        // StateAlloc StateFree
         AppLayerParserRegisterStateFuncs(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateAlloc, SMTPStateFree);
-
+        // AppLayerParserFPtr
         AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_SMTP, STREAM_TOSERVER,
                                      SMTPParseClientRecord);
+        // AppLayerParserFPtr
         AppLayerParserRegisterParser(IPPROTO_TCP, ALPROTO_SMTP, STREAM_TOCLIENT,
                                      SMTPParseServerRecord);
-
+        // StateGetEventInfo
         AppLayerParserRegisterGetEventInfo(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateGetEventInfo);
+        // StateGetEventInfoById
         AppLayerParserRegisterGetEventInfoById(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateGetEventInfoById);
+        // StateGetEvents
         AppLayerParserRegisterGetEventsFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPGetEvents);
+        // GetTxDetectState SetTxDetectState
         AppLayerParserRegisterDetectStateFuncs(IPPROTO_TCP, ALPROTO_SMTP,
                                                SMTPGetTxDetectState, SMTPSetTxDetectState);
-
+        // LocalStorageAlloc LocalStorageFree
         AppLayerParserRegisterLocalStorageFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPLocalStorageAlloc,
                                                SMTPLocalStorageFree);
-
+        // StateTransactionFree
         AppLayerParserRegisterTxFreeFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateTransactionFree);
+        // StateGetFiles
         AppLayerParserRegisterGetFilesFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateGetFiles);
+        // StateGetProgress
         AppLayerParserRegisterGetStateProgressFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateGetAlstateProgress);
+        // StateGetTxCnt
         AppLayerParserRegisterGetTxCnt(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateGetTxCnt);
+        // StateGetTx
         AppLayerParserRegisterGetTx(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateGetTx);
+        // GetTxData
         AppLayerParserRegisterTxDataFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPGetTxData);
+        // StateGetProgressCompletionStatus
         AppLayerParserRegisterGetStateProgressCompletionStatus(ALPROTO_SMTP,
                                                                SMTPStateGetAlstateProgressCompletionStatus);
+        // Truncate
         AppLayerParserRegisterTruncateFunc(IPPROTO_TCP, ALPROTO_SMTP, SMTPStateTruncate);
     } else {
         SCLogInfo("Parsed disabled for %s protocol. Protocol detection"

@@ -98,6 +98,7 @@ void StorageCleanup(void)
 
 int StorageRegister(const StorageEnum type, const char *name, const unsigned int size, void *(*Alloc)(unsigned int), void (*Free)(void *))
 {
+    //
     if (storage_registraton_closed)
         return -1;
 
@@ -106,6 +107,7 @@ int StorageRegister(const StorageEnum type, const char *name, const unsigned int
         return -1;
 
     StorageList *list = storage_list;
+    // 校验如果类型和名称都已经存在则返回错误
     while (list) {
         if (strcmp(name, list->map.name) == 0 && type == list->map.type) {
             SCLogError(SC_ERR_INVALID_VALUE, "storage for type \"%s\" with "
@@ -130,6 +132,7 @@ int StorageRegister(const StorageEnum type, const char *name, const unsigned int
     entry->map.Free = Free;
 
     entry->id = storage_max_id[type]++;
+    // 添加到链表中
     entry->next = storage_list;
     storage_list = entry;
 

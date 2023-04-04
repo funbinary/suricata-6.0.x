@@ -890,6 +890,7 @@ int RunModeIdsAFPWorkers(void)
 {
     SCEnter();
 #ifdef HAVE_AF_PACKET
+    SCLogInfo("========RunModeIdsAFPWorkers========");
     int ret;
     const char *live_dev = NULL;
 
