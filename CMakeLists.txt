@@ -60,7 +60,7 @@ else ()
     include_directories(${LIBHTP_INCLUDE_DIR})
 endif ()
 ##########################################################################################
-find_library (LIB_SURICATA_RUST libsuricata.a  "/opt/suricata-rust/" NO_DEFAULT_PATH)
+find_library (LIB_SURICATA_RUST libsuricata.a  "${CMAKE_CURRENT_SOURCE_DIR}/rust/target/release" NO_DEFAULT_PATH)
 
 message(STATUS "libsuricata rust root dir: ${LIB_SURICATA_RUST}")
 message(STATUS "libsuricata rust libraries: ${LIB_SURICATA_RUST}")
